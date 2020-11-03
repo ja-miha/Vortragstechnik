@@ -59,5 +59,5 @@ class SelfAvoidingWalk:
 
 
 SAW = SelfAvoidingWalk()
-SAW.walk_everywhere(3)
+SAW.walk_sample(2, 1000)
 print(SAW.square_disp())

@@ -17,16 +17,10 @@ class SelfAvoidingWalk
         std::vector<std::vector<int> > make_all_steps(std::vector<int> &position, std::set<std::vector<int> > &history){
             std::vector<std::vector<int> > next_positions;
             std::vector<int> trial_position;
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < dimension*2; i++)
             {
                 trial_position = position;
-                trial_position[i] = trial_position[i]+1;
-                if (history.count(trial_position)==0)
-                {
-                    next_positions.push_back(trial_position);
-                }
-                trial_position = position;
-                trial_position[i] = trial_position[i]-1;
+                trial_position[i/2] = trial_position[i/2] + 2*(i%2)-1;
                 if (history.count(trial_position)==0)
                 {
                     next_positions.push_back(trial_position);
@@ -39,28 +33,33 @@ class SelfAvoidingWalk
 
         std::vector<int> random_step(std::vector<int> position){
             int randint = dis(gen);
-            position[(randint-1)/2] = position[(randint-1)/2] + 2*((randint)%2)-1;
+            position[(randint)/2] = position[(randint)/2] + 2*((randint)%2)-1;
             return position;
         }
 
     public:
 
+        // the dimension
+
+        int dimension;
+
         // the coordinates reached at each end of a walk are stored here
 
         std::vector<std::vector<int> > result;
 
-        // initialize the object
+        // initialize the object, set dimension
 
-        SelfAvoidingWalk(){
+        SelfAvoidingWalk(int dim = 3){
+            dimension = dim;
             std::random_device seed;
             gen = std::mt19937(seed());
-            dis = std::uniform_int_distribution<>(1, 6);
-            std::vector<std::vector<int> > result = std::vector<std::vector<int> >();
+            dis = std::uniform_int_distribution<>(0, 2*dim-1);
+            result = std::vector<std::vector<int> >();
         }
 
         // find all possible self avoiding walks of length N (only works for small N, maybe up to about 13)
 
-        void walk_everywhere(int N, std::vector<int> position = {0, 0, 0}, std::set<std::vector<int> > history = std::set<std::vector<int> >(), int step = 1){
+        void walk_everywhere(int N, std::vector<int> position = std::vector<int>(), std::set<std::vector<int> > history = std::set<std::vector<int> >(), int step = 1){
         if (step==N)
         {
             std::vector<std::vector<int> > next = make_all_steps(position, history);
@@ -72,10 +71,11 @@ class SelfAvoidingWalk
             return;
         }
         else if (step==1)
-        {
+        {   
+            std::vector<int> pos = std::vector<int>(dimension, 0);
             result = std::vector<std::vector<int> >();
-            history.insert(position);
-            std::vector<std::vector<int> > next = make_all_steps(position, history);
+            history.insert(pos);
+            std::vector<std::vector<int> > next = make_all_steps(pos, history);
             for (int i = 0; i < next.size(); i++)
             {
                 std::set<std::vector<int> > his = history;
@@ -102,7 +102,7 @@ class SelfAvoidingWalk
             result = std::vector<std::vector<int> >();
             while (result.size()<sample_size)
             {
-                std::vector<int> position{0, 0, 0};
+                std::vector<int> position(dimension, 0);
                 std::set<std::vector<int> > history{position};
                 //history.insert(position);
                 bool avoidance_flag = false;
@@ -139,16 +139,33 @@ class SelfAvoidingWalk
         }
 };
 
-// how to use: first argument is length of walk N, second is size of your sample.
-//If N is sufficiently small, the excact count is also returned after the sampling result.
+// how to use: first argument is mode(1=sample, else=count), second argument is length of walk N, third is size of your sample(only if mode==1),
+// forth(optional, default 3) is dimension
 
 int main(int argc, char** argv){
-    SelfAvoidingWalk SAW;
-    int N = atoi(argv[1]);
-    int sample = atoi(argv[2]);
-    SAW.walk_sample(N, sample);
-    std::cout << SAW.square_disp() << std::endl;
-    if (N<10)
+    int mode = atoi(argv[1]);
+    int N = atoi(argv[2]);
+    int sample;
+    if (mode==1)
+    {
+        sample = atoi(argv[3]);
+    }
+    int dim;
+    if (((argc>4)&&(mode==1))||((argc>3)&&(mode!=1)))
+    {
+        dim = atoi(argv[argc-1]);
+    }
+    else
+    {
+        dim = 3;
+    }
+    SelfAvoidingWalk SAW(dim);
+    if (mode==1)
+    {
+        SAW.walk_sample(N, sample);
+        std::cout << SAW.square_disp() << std::endl;
+    }
+    else
     {
         SAW.walk_everywhere(N);
         std::cout << SAW.square_disp() << std::endl;
