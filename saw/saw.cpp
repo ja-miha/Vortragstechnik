@@ -74,11 +74,8 @@ class SelfAvoidingWalk
         else if (step==1)
         {
             result = std::vector<std::vector<int> >();
+            history.insert(position);
             std::vector<std::vector<int> > next = make_all_steps(position, history);
-            if (step==1)
-            {
-                history.insert(position);
-            }
             for (int i = 0; i < next.size(); i++)
             {
                 std::set<std::vector<int> > his = history;
@@ -89,10 +86,6 @@ class SelfAvoidingWalk
         else
         {
             std::vector<std::vector<int> > next = make_all_steps(position, history);
-            if (step==1)
-            {
-                history.insert(position);
-            }
             for (int i = 0; i < next.size(); i++)
             {
                 std::set<std::vector<int> > his = history;
