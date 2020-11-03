@@ -52,6 +52,12 @@
         "ctime": "cpp",
         "unordered_set": "cpp",
         "fstream": "cpp",
-        "iostream": "cpp"
+        "iostream": "cpp",
+        "cstring": "cpp",
+        "bitset": "cpp",
+        "list": "cpp",
+        "map": "cpp",
+        "typeindex": "cpp",
+        "variant": "cpp"
     }
 }
