@@ -1,8 +1,17 @@
 #include <vector>
 #include <iostream>
 #include <ctime>
-#include <set>
+#include <unordered_set>
 #include <random>
+#include <boost/functional/hash.hpp>
+
+struct vectorhash
+{
+    std::size_t operator()(std::vector<int> vec) const noexcept
+    {
+        return boost::hash_range(vec.begin(), vec.end());
+    }
+};
 
 class SelfAvoidingWalk
 {
@@ -14,7 +23,7 @@ class SelfAvoidingWalk
 
         // return all possible new positions in the range of one step from your old position, that are not included in the history of your walk
 
-        std::vector<std::vector<int> > make_all_steps(std::vector<int> &position, std::set<std::vector<int> > &history){
+        std::vector<std::vector<int> > make_all_steps(std::vector<int> &position, std::unordered_set<std::vector<int>, vectorhash> &history){
             std::vector<std::vector<int> > next_positions;
             std::vector<int> trial_position;
             for (int i = 0; i < dimension*2; i++)
@@ -59,7 +68,7 @@ class SelfAvoidingWalk
 
         // find all possible self avoiding walks of length N (only works for small N, maybe up to about 13)
 
-        void walk_everywhere(int N, std::vector<int> position = std::vector<int>(), std::set<std::vector<int> > history = std::set<std::vector<int> >(), int step = 1){
+        void walk_everywhere(int N, std::vector<int> position = std::vector<int>(), std::unordered_set<std::vector<int>, vectorhash> history = std::unordered_set<std::vector<int>, vectorhash>(), int step = 1){
         if (step==N)
         {
             std::vector<std::vector<int> > next = make_all_steps(position, history);
@@ -78,7 +87,7 @@ class SelfAvoidingWalk
             std::vector<std::vector<int> > next = make_all_steps(pos, history);
             for (int i = 0; i < next.size(); i++)
             {
-                std::set<std::vector<int> > his = history;
+                std::unordered_set<std::vector<int>, vectorhash> his = history;
                 his.insert(next[i]);
                 walk_everywhere(N, next[i], his, step+1);
             }
@@ -88,11 +97,10 @@ class SelfAvoidingWalk
             std::vector<std::vector<int> > next = make_all_steps(position, history);
             for (int i = 0; i < next.size(); i++)
             {
-                std::set<std::vector<int> > his = history;
+                std::unordered_set<std::vector<int>, vectorhash> his = history;
                 his.insert(next[i]);
                 walk_everywhere(N, next[i], his, step+1);
             }
-            
         }
         }
 
@@ -103,7 +111,7 @@ class SelfAvoidingWalk
             while (result.size()<sample_size)
             {
                 std::vector<int> position(dimension, 0);
-                std::set<std::vector<int> > history{position};
+                std::unordered_set<std::vector<int>, vectorhash> history{position};
                 //history.insert(position);
                 bool avoidance_flag = false;
                 for (int i = 0; i < N; i++)
@@ -140,7 +148,7 @@ class SelfAvoidingWalk
 };
 
 // how to use: first argument is mode(1=sample, else=count), second argument is length of walk N, third is size of your sample(only if mode==1),
-// forth(optional, default 3) is dimension
+// last (optional, default 3) is dimension
 
 int main(int argc, char** argv){
     int mode = atoi(argv[1]);

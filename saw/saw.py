@@ -55,9 +55,6 @@ class SelfAvoidingWalk:
             s += (element[0]**2 + element[1]**2 + element[2]**2)
         return s/len(self.result)
 
-
-
-
 SAW = SelfAvoidingWalk()
-SAW.walk_sample(2, 1000)
+SAW.walk_everywhere(10)
 print(SAW.square_disp())
