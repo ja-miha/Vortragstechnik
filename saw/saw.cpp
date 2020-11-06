@@ -21,23 +21,6 @@ class SelfAvoidingWalk
         std::random_device seed;
         std::uniform_int_distribution<> dis;
 
-        // return all possible new positions in the range of one step from your old position, that are not included in the history of your walk
-
-        std::vector<std::vector<int> > make_all_steps(std::vector<int> &position, const std::unordered_set<std::vector<int>, vectorhash> &history){
-            std::vector<std::vector<int> > next_positions;
-            std::vector<int> trial_position;
-            for (int i = 0; i < dimension*2; i++)
-            {
-                trial_position = position;
-                trial_position[i/2] = trial_position[i/2] + 2*(i%2)-1;
-                if (history.count(trial_position)==0)
-                {
-                    next_positions.push_back(trial_position);
-                }
-            }
-            return next_positions;
-        }
-
         // make a random step from your old position and return the new position
 
         std::vector<int> random_step(std::vector<int> position){
@@ -68,39 +51,42 @@ class SelfAvoidingWalk
 
         // find all possible self avoiding walks of length N (only works for small N, maybe up to about 13)
 
-        void walk_everywhere(int N, std::vector<int> position = std::vector<int>(), const std::unordered_set<std::vector<int>, vectorhash> &history = std::unordered_set<std::vector<int>, vectorhash>(), int step = 1){
+        void walk_everywhere(int N, std::vector<int> position = std::vector<int>(), const std::unordered_set<std::vector<int>, vectorhash> &history = std::unordered_set<std::vector<int>, vectorhash>(), int step = 0){
         if (step==N)
         {
-            std::vector<std::vector<int> > next = make_all_steps(position, history);
-            for (int i = 0; i < next.size(); i++)
+            for (int i = 0; i < dimension*2; i++)
             {
-                result.push_back(next[i]);
+                std::vector<int> next_position = position;
+                next_position[i/2] = next_position[i/2] + 2*(i%2)-1;
+                if (history.count(next_position)==0)
+                {
+                    result.push_back(next_position);
+                }
             }
             
             return;
         }
-        else if (step==1)
+        else if (step==0)
         {   
             result = std::vector<std::vector<int> >();
             std::vector<int> pos = std::vector<int>(dimension, 0);
-            std::unordered_set<std::vector<int>, vectorhash> start_history = history;
-            start_history.insert(pos);
-            std::vector<std::vector<int> > next = make_all_steps(pos, start_history);
-            for (int i = 0; i < next.size(); i++)
-            {
-                std::unordered_set<std::vector<int>, vectorhash> his = start_history;
-                his.insert(next[i]);
-                walk_everywhere(N, next[i], his, step+1);
-            }
+            std::unordered_set<std::vector<int>, vectorhash> his = history;
+            his.insert(pos);
+            walk_everywhere(N, pos, his, step+1);
         }
         else
         {
-            std::vector<std::vector<int> > next = make_all_steps(position, history);
-            for (int i = 0; i < next.size(); i++)
+            
+            for (int i = 0; i < dimension*2; i++)
             {
-                std::unordered_set<std::vector<int>, vectorhash> his = history;
-                his.insert(next[i]);
-                walk_everywhere(N, next[i], his, step+1);
+                std::vector<int> next_position = position;
+                next_position[i/2] = next_position[i/2] + 2*(i%2)-1;
+                if (history.count(next_position)==0)
+                {
+                    std::unordered_set<std::vector<int>, vectorhash> his = history;
+                    his.insert(next_position);
+                    walk_everywhere(N, next_position, his, step+1);
+                }
             }
         }
         }
@@ -172,12 +158,12 @@ int main(int argc, char** argv){
     if (mode==1)
     {
         SAW.walk_sample(N, sample);
-        std::cout << SAW.square_disp() << std::endl;
+        std::cout << SAW.result.size()<< " " << SAW.square_disp() << std::endl;
     }
     else
     {
         SAW.walk_everywhere(N);
-        std::cout << SAW.square_disp() << std::endl;
+        std::cout << SAW.result.size() << " " << SAW.square_disp() << std::endl;
     }
 
     return 1;
