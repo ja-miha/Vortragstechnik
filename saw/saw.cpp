@@ -45,18 +45,6 @@ class SelfAvoidingWalk
             return first;
         }
 
-        void permute(std::vector<int> &vec){
-            std::mt19937 rn;
-            std::uniform_int_distribution<> select(0, vec.size());
-            for (int i = 0; i < 2*dimension; i++)
-            {
-                int pos = select(rn);
-                int temp = vec[pos];
-                vec[pos] = vec[0];
-                vec[0] = temp;
-            }
-            
-        }
 
 
     public:
@@ -73,9 +61,6 @@ class SelfAvoidingWalk
 
         SelfAvoidingWalk(int dim = 3){
             dimension = dim;
-            std::random_device seed;
-            gen = std::mt19937(seed());
-            dis = std::uniform_int_distribution<>(0, 2*dim-1);
             result = std::vector<std::vector<int> >();
         }
 
@@ -123,6 +108,9 @@ class SelfAvoidingWalk
         // make a sample of standard random walks until you have encountered sample_size self avoiding random walks of length N 
 
         void walk_sample(int N, int sample_size){
+            std::random_device seed;
+            gen = std::mt19937(seed());
+            dis = std::uniform_int_distribution<>(0, 2*dimension-1);
             result = std::vector<std::vector<int> >();
             while (result.size()<sample_size)
             {
@@ -155,78 +143,68 @@ class SelfAvoidingWalk
             std::uniform_int_distribution<> sig(0, 1);
             std::vector<int> permutation;
             for (int i = 0; i < dimension; i++) permutation.push_back(i);
-            std::vector<int> no_permutation = permutation;
-            std::vector<int> ones(dimension, 1);
             result.clear();
             std::vector<std::vector<int> > walk(N+1, std::vector<int>(dimension, 0));
             for (int i = 0; i < N+1; i++) walk[i][0] = i;
             result.push_back(walk.back());
-            std::unordered_set<std::vector<int>, vectorhash> avoidance_check;
             while (result.size()<sample_size+200000)
             {
-                int avoidance_flag = 1;
-                avoidance_check.clear();
+                std::unordered_set<std::vector<int>, vectorhash> avoidance_check;
                 int pivot = piv(generator);
-                avoidance_check.insert(walk[pivot]);
                 std::shuffle(permutation.begin(), permutation.end(), generator);
-                std::vector<std::vector<int> > new_walk = walk;
+                std::vector<std::vector<int> > new_walk(N+1);
+                std::copy(walk.begin(), walk.end(), new_walk.begin());
                 std::vector<int> sigmas;
                 for (int i = 0; i < dimension; i++) sigmas.push_back(2*sig(generator)-1);
-                if ((permutation==no_permutation)&&(sigmas==ones)) continue;
                 for (int i = pivot+1; i < walk.size(); i++)
                 {
                     for (int j = 0; j < dimension; j++)
                     {
                         new_walk[i][permutation[j]] = walk[pivot][permutation[j]] + sigmas[j] * (walk[i][j]-walk[pivot][j]);
                     }
-                    if (2*pivot-i>-1)
-                    {
-                        if (avoidance_check.count(new_walk[2*pivot-i]) == 1)
-                        {
-                            avoidance_flag = 0;
-                            break;
-                        }
-                        avoidance_check.insert(new_walk[2*pivot-i]);
-                    }
-                    if (avoidance_check.count(new_walk[i]) == 1)
-                        {
-                            avoidance_flag = 0;
-                            break;
-                        }
-                    avoidance_check.insert(new_walk[i]);
                 }
-                if (2*pivot-walk.size()>-1)
+                for (int i = 1; i < std::max(int(new_walk.size())-pivot, pivot)+1; i++)
                 {
-                    for (int i = 2*pivot-walk.size(); i > -1; i--)
-                    {
-                        if (avoidance_check.count(new_walk[i]) == 1)
+                    if (pivot+i<walk.size())
+                    {    
+                        if (avoidance_check.count(new_walk[pivot+i])==1)
                         {
-                            avoidance_flag = 0;
+                            result.push_back(walk.back());
                             break;
                         }
-                        avoidance_check.insert(new_walk[i]);
+                    
+                        avoidance_check.insert(new_walk[pivot+i]);
+                    }
+                    if (pivot-i>-1)
+                    {
+                        if (avoidance_check.count(new_walk[pivot-i])==1)
+                        {
+                            result.push_back(walk.back());
+                            break;
+                        }
+                        avoidance_check.insert(new_walk[pivot-i]);
                     }
                 }
-                if (avoidance_flag==1)
+                if (avoidance_check.size()==N)
                 {
-                    walk = new_walk;
-                }
-                result.push_back(walk.back());
+                    std::copy(new_walk.begin(), new_walk.end(), walk.begin());
+                    result.push_back(new_walk.back());
+                } 
             }
         }
 
         // calculate the mean square displacement from result of either walk_sample or walk_everywhere 
 
         double square_disp(int initialisation = 0){
-            double square_disp = 0;
+            long int sum = 0;
             for (int i = initialisation; i < result.size(); i++)
             {
                 for (int j = 0; j < result[i].size(); j++)
                 {
-                    square_disp = square_disp + (result[i][j]*result[i][j]);
+                    sum = sum + (result[i][j]*result[i][j]);
                 }
             }
-            square_disp = square_disp / (result.size()-initialisation);
+            double square_disp = (double)sum / (result.size()-initialisation);
             return square_disp;
         }
 };
@@ -255,17 +233,17 @@ int main(int argc, char** argv){
     if (mode==1)
     {
         SAW.walk_sample(N, sample);
-        std::cout << SAW.result.size()<< " " << SAW.square_disp() << std::endl;
+        std::cout << N << ", " << SAW.square_disp() << ", "<< mode << std::endl;
     }
     else if (mode==2)
     {
         SAW.walk_metro(N, sample);
-        std::cout << SAW.result.size()-200000 << " " << SAW.square_disp(200000) << std::endl;
+        std::cout << N << ", " << SAW.square_disp(200000) << ", "<< mode << std::endl;
     }
     else
     {
         SAW.walk_everywhere(N);
-        std::cout << SAW.result.size() << " " << SAW.square_disp() << std::endl;
+        std::cout << N << ", " << SAW.square_disp() << ", "<< mode << std::endl;
     }
 
     return 1;
