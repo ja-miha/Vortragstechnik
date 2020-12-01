@@ -82,6 +82,9 @@
         "queue": "cpp",
         "ratio": "cpp",
         "thread": "cpp",
-        "stop_token": "cpp"
+        "stop_token": "cpp",
+        "codecvt": "cpp",
+        "iomanip": "cpp",
+        "stack": "cpp"
     }
 }
