@@ -1,4 +1,4 @@
-for i in 2 3 4 5 6 7 8 9 10 11 12
+for i in 13 17 23 27 
 do
-  ./walk.run 2 $i 1000000 2 
+  ./saw/walk.run 1 $i 1000 2
 done

@@ -49,6 +49,25 @@ class SelfAvoidingWalk:
             if not avoidance_flag:
                 self.result.append(position)
 
+    def walk_draw(self, N):
+        avoidance_flag = True
+        while avoidance_flag:
+            avoidance_flag = False
+            self.result = []
+            position=(0, 0, 0)
+            history={(0, 0, 0)}
+            for i in range(N):
+                position = self.random_step(position)
+                if position in history:
+                        avoidance_flag = True
+                        break
+                history.add(position)
+                self.result.append(position)
+        
+    def save(self):
+        arr = np.array(self.result, dtype=int)
+        np.savetxt("samplewalk_%i.txt" % len(self.result), arr)
+        
     def square_disp(self):
         s = 0
         for element in self.result:
@@ -56,5 +75,5 @@ class SelfAvoidingWalk:
         return s/len(self.result)
 
 SAW = SelfAvoidingWalk()
-SAW.walk_everywhere(10)
-print(SAW.square_disp())
+SAW.walk_draw(10)
+SAW.save()

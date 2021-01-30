@@ -23,6 +23,7 @@ class SelfAvoidingWalk
         std::mt19937 gen;
         std::random_device seed;
         std::uniform_int_distribution<> dis;
+        int filecount;
 
         std::vector<std::vector<int> > first_walk(int N){
             std::vector<std::vector<int> > first;
@@ -63,6 +64,7 @@ class SelfAvoidingWalk
         SelfAvoidingWalk(int dim = 3){
             dimension = dim;
             result = std::vector<std::vector<int> >();
+            filecount = 0;
         }
 
         // find all possible self avoiding walks of length N (only works for small N, maybe up to about 13)
@@ -108,17 +110,20 @@ class SelfAvoidingWalk
 
         // make a sample of standard random walks until you have encountered sample_size self avoiding random walks of length N 
 
-        void walk_sample(int N, int sample_size){
+        void walk_sample(int N, int sample_size, bool record_acceptance_fraction = false){
             std::random_device seed;
             gen = std::mt19937(seed());
             dis = std::uniform_int_distribution<>(0, 2*dimension-1);
             result = std::vector<std::vector<int> >();
+            int count = 0;
+            int saw_count = 0; 
             while (result.size()<sample_size)
             {
                 std::vector<int> position(dimension, 0);
                 std::unordered_set<std::vector<int>, vectorhash> history{position};
                 //history.insert(position);
                 bool avoidance_flag = false;
+                count++;
                 for (int i = 0; i < N; i++)
                 {
                     int randint = dis(gen);
@@ -133,13 +138,18 @@ class SelfAvoidingWalk
                 if (avoidance_flag==false)
                 {
                     result.push_back(position);
+                    saw_count++;
                 }
+            }
+            if (record_acceptance_fraction)
+            {
+                std::cout << (double)saw_count / count << std::endl;
             }
         }
 
         // use the pivot algorithm to estimate mse
 
-        void walk_metro(int N, int sample_size, bool record_acceptance_fraction = false){
+        void walk_metro(int N, int sample_size, bool record_acceptance_fraction = false, bool as_example=false){
             std::random_device seed;
             std::mt19937 generator(seed());
             std::uniform_int_distribution<> piv(1, N-1);
@@ -211,7 +221,103 @@ class SelfAvoidingWalk
             {
                 std::cout << (double)acc_count / count << std::endl;
             }
+            if (as_example==true){
+                result = walk;
+            }
             
+        }
+
+        // generate pivot move for presentation
+
+        void walk_pivot_example(int N){
+            std::random_device seed;
+            std::mt19937 generator(seed());
+            std::uniform_int_distribution<> piv(1, N-1);
+            std::uniform_int_distribution<> sig(0, 1);
+            std::vector<int> permutation;
+            for (int i = 0; i < dimension; i++) permutation.push_back(i);
+            std::vector<std::vector<int> > walk = result;
+            // this is just to avoid identity as trafo
+            std::vector<int> id = permutation;
+            std::vector<int> ones = std::vector<int>(dimension, 1);
+            std::unordered_set<std::vector<int>, vectorhash> avoidance_check;
+            //
+            while (avoidance_check.size()<N)
+            {
+                avoidance_check.clear();
+                int pivot = piv(generator);
+                std::shuffle(permutation.begin(), permutation.end(), generator);
+                std::vector<std::vector<int> > new_walk = walk;
+                //std::copy(walk.begin(), walk.end(), new_walk.begin());
+
+                std::vector<int> sigmas;
+                for (int i = 0; i < dimension; i++) sigmas.push_back(2*sig(generator)-1);
+                // this is just to avoid identity as trafo
+                if ((sigmas == ones)&&(permutation==id)) continue;
+                //
+                for (int i = pivot+1; i < N+1; i++)
+                {
+                    for (int j = 0; j < dimension; j++)
+                    {
+                        new_walk[i][permutation[j]] = walk[pivot][permutation[j]] + sigmas[j] * (walk[i][j]-walk[pivot][j]);
+                    }
+                }
+                for (int i = 1; i < std::max(int(new_walk.size())-pivot, pivot)+1; i++)
+                {
+                    if (pivot+i<N+1)
+                    {    
+                        if (avoidance_check.count(new_walk[pivot+i])==1)
+                        {
+                            result.push_back(walk.back());
+                            break;
+                        }
+                    
+                        avoidance_check.insert(new_walk[pivot+i]);
+                    }
+                    if (pivot-i>-1)
+                    {
+                        if (avoidance_check.count(new_walk[pivot-i])==1)
+                        {
+                            result.push_back(walk.back());
+                            break;
+                        }
+                        avoidance_check.insert(new_walk[pivot-i]);
+                    }
+                }
+                if (avoidance_check.size()==N)
+                {
+                    //std::copy(new_walk.begin(), new_walk.end(), walk.begin());
+                    walk = new_walk;
+                }
+            }
+            result = walk;
+        }
+
+        // generate counterexample for presentation
+
+        void counterex(int N){
+            std::random_device seed;
+            gen = std::mt19937(seed());
+            dis = std::uniform_int_distribution<>(0, 2*dimension-1);
+            result = std::vector<std::vector<int> >();
+            bool avoidance_flag = false;
+            while (avoidance_flag==false)
+            {
+                std::vector<int> position(dimension, 0);
+                std::unordered_set<std::vector<int>, vectorhash> history{position};
+                //history.insert(position);
+                for (int i = 0; i < N+1; i++)
+                {
+                    int randint = dis(gen);
+                    position[(randint)/2] = position[(randint)/2] + 2*((randint)%2)-1;
+                    if (history.count(position)==1)
+                    {
+                        avoidance_flag = true;
+                    }
+                    history.insert(position);
+                    result.push_back(position);
+                }
+            }
         }
 
         // calculate the mean square displacement from result of either walk_sample or walk_everywhere 
@@ -297,9 +403,25 @@ class SelfAvoidingWalk
             sigma = sigma / (double)(n_bins*(n_bins-1));
             return 2 * std::sqrt(sigma);
         }
+
+        // write result to file
+
+        void to_file(){
+            std::ofstream f("random_walk_result"+std::to_string(result.size())+"_"+std::to_string(filecount)+".txt");
+            for (int i = 0; i < result.size(); i++)
+            {
+                for (int j = 0; j < dimension; j++)
+                {
+                    f << result[i][j] << " ";
+                }
+                f << std::endl;
+            }
+            filecount++;
+            
+        }
 };
 
-// how to use: first argument is mode(1=sample, else=count), second argument is length of walk N, third is size of your sample(only if mode==1),
+// how to use: first argument is mode(2=pivot, 1=sample, -1=example, else=count), second argument is length of walk N, third is size of your sample(only if mode==1),
 // last (optional, default 3) is dimension
 
 int main(int argc, char** argv){
@@ -311,7 +433,12 @@ int main(int argc, char** argv){
         sample = atoi(argv[3]);
     }
     int dim;
-    if (((argc>4)&&(mode==2))||((argc>4)&&(mode==1))||((argc>3)&&(mode!=1)&&(mode!=2)))
+    if (mode == -1)
+    {
+        dim = 2;
+        sample = atoi(argv[3]);
+    }
+    else if (((argc>4)&&(mode==2))||((argc>4)&&(mode==1))||((argc>3)&&(mode!=1)&&(mode!=2)))
     {
         dim = atoi(argv[argc-1]);
     }
@@ -322,7 +449,7 @@ int main(int argc, char** argv){
     SelfAvoidingWalk SAW(dim);
     if (mode==1)
     {
-        SAW.walk_sample(N, sample);
+        SAW.walk_sample(N, sample, true);
         std::cout << N << ", " << SAW.square_disp() << ", "<< mode << std::endl;
     }
     else if (mode>1)
@@ -340,6 +467,15 @@ int main(int argc, char** argv){
             std::cout << N << ", " << SAW.square_disp(200000) << ", " << SAW.binning(1000, 200000) << ", "<< mode << std::endl;
             SAW.corelation_time_list(200000);
         }
+    }
+    else if (mode == -1)
+    {
+        SAW.walk_metro(N, sample, false, true);
+        SAW.to_file();
+        SAW.walk_pivot_example(N);
+        SAW.to_file();
+        SAW.counterex(N);
+        SAW.to_file();
     }
     else
     {
